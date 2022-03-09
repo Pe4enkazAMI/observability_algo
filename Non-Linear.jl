@@ -5,8 +5,9 @@ using Nemo
 @variables t x1(t) x2(t) a(t) c(t) d(t)
 
 # Example 1
-DX = [a*x1 + x1*x2, c*x2 + d*x1*x2, 0, 0, 0] ##last 3 eq's are for params "a, c, d"
-y = x1
+DX = [exp(x2), x2] ##last 3 eq's are for params "a, c, d"
+y1 = x1
+y2 = x2
 
 
 
@@ -73,15 +74,20 @@ get_rank(K([1, 2, 3, 4, 5])) =#
 
 
 
-
+function TO_DO(Matrix::Any, params::Any)
+    nums = eval(build_function(Matrix, params)[1])
+    gen = rand(Float32, (1, length(params)))
+    return nums(gen)    
+end
 
 function is_NL_Observable(sys::Any, viewable::Any, params::Any, exact::Any = nothing)
+
      n = length(viewable)
      for i in (n+1):(length(sys)-1 + n)
          push!(viewable, dot(Symbolics.gradient(viewable[i - n], params, simplify = true), sys))
      end
 
-    ans = Symbolics.jacobian(Y, params, simplify=true)
+    ans = Symbolics.jacobian(viewable, params, simplify=true)
 
     if exact != nothing
 
@@ -90,7 +96,9 @@ function is_NL_Observable(sys::Any, viewable::Any, params::Any, exact::Any = not
         return simplify(det(ans)), exact_ans
     end
 
-    return simplify(det(ans))
+
+    return ans
 end
 
-println(expand(is_NL_Observable(DX, y, [x1, x2, a, c, d])))
+
+println(expand(is_NL_Observable(DX, vec([y1, y2]), [x1, x2])))
