@@ -28,66 +28,39 @@ end
 
 ######################## Function for computing ans for exact parameter
 function get_ans_exact(Matrix::Any, exact::Any, vars::Any)
-     _Only_Here_ = copy(Matrix)
 
-     before_add = eval(build_function(_Only_Here_, vars)[1])
+    random_array = rand(Float32, length(vars))
 
-     rkMat = get_rank(before_add(rand(Int, (1, length(vars)))))
+    _Only_Here_ = copy(Matrix)
 
-     push!(_Only_Here_, exact)
+    _Only_Here_ = Symbolics.value.(substitute(_Only_Here_, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
 
-     after_add = eval(build_function(_Only_Here_, vars)[1])
+    exact = Symbolics.value.(substitute(exact, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
 
-     rkExMat = get_rank(after_add(rand(Int, (1, length(vars)))))
-     if rkExMat == rkMat
-          return 1
-     else
-          return 0
-     end
+    rkMat = get_rank(_Only_Here_)
+
+    push!(_Only_Here_, exact)
+
+    rkExMat = get_rank(_Only_Here_)
+    if rkExMat == rkMat
+         return 1
+    else
+         return 0
+    end
 end
 ########################
 
 
 
-
-#=function test(sys::Any, viewable::Any, params::Any, exact::Any = nothing)
-     n = length(viewable)
-     for i in (n+1):(length(sys)-1 + n)
-         push!(viewable, dot(Symbolics.gradient(viewable[i - n], params, simplify = true), sys))
-     end
- 
-     ans = Symbolics.jacobian(Y, params, simplify=true)
-     if exact != nothing
- 
-         exact_ans = get_ans_exact(ans, exact, params)
-
-         return simplify(det(ans)), exact_ans
-     end
-     return ans
- end
-
-fff = test(DX, y, [x1, x2, a, c, d])
-
-K = eval(build_function(fff, [x1, x2, a, c, d])[1])
-get_rank(K([1, 2, 3, 4, 5])) =#
-
-
-
-
-function TO_DO(Matrix::Any, params::Any)
-    nums = eval(build_function(Matrix, params)[1])
-    gen = rand(Float32, (1, length(params)))
-    return nums(gen)    
-end
-
 function is_NL_Observable(sys::Any, viewable::Any, params::Any, exact::Any = nothing)
-
+    rand_arr = rand(Float32, length(params))
      n = length(viewable)
      for i in (n+1):(length(sys)-1 + n)
          push!(viewable, dot(Symbolics.gradient(viewable[i - n], params, simplify = true), sys))
      end
 
     ans = Symbolics.jacobian(viewable, params, simplify=true)
+    shape = sizeof(shape)
 
     if exact != nothing
 
@@ -96,8 +69,9 @@ function is_NL_Observable(sys::Any, viewable::Any, params::Any, exact::Any = not
         return simplify(det(ans)), exact_ans
     end
 
+    ans = get_rank(Symbolics.value.(substitute(ans, Dict(params[i] => rand_arr[i] for i in 1:length(params))))
 
-    return ans
+    return ans == min(shape)
 end
 
 

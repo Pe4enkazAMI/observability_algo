@@ -1,15 +1,24 @@
 using Symbolics
-@variables x, y
+@variables t, x(t), y(t)
 
-S = [exp(x) exp(x^2) sin(x)  cos(x)]
-s_expr = eval(build_function(S, x)[1])
-s_expr(1)
+function get_ans_exact(Matrix::Any, exact::Any, vars::Any)
 
+    random_array = rand(Float32, length(vars))
 
-function TO_DO(Matrix::Any, params::Any)
-    nums = eval(build_function(Matrix, params)[1])
-    gen = rand(Float32, (1, length(params)))
-    return nums(gen)    
+    _Only_Here_ = copy(Matrix)
+
+    _Only_Here_ = Symbolics.value.(substitute(_Only_Here_, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
+
+    exact = Symbolics.value.(substitute(exact, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
+    
+    rkMat = get_rank(_Only_Here_)
+
+    push!(_Only_Here_, exact)
+
+    rkExMat = get_rank(_Only_Here_)
+    if rkExMat == rkMat
+         return 1
+    else
+         return 0
+    end
 end
-par = [x, y]
-TO_DO(S, par)
