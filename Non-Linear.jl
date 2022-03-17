@@ -27,7 +27,7 @@ end
 
 
 ######################## Function for computing ans for exact parameter
-function get_ans_exact(Matr::Any, exact::Any, vars::Any)
+function get_ans_specific(Matr::Any, specific::Any, vars::Any)
 
     random_array = rand(Float32, length(vars))
 
@@ -35,11 +35,11 @@ function get_ans_exact(Matr::Any, exact::Any, vars::Any)
 
     _Only_Here_ = Symbolics.value.(substitute(_Only_Here_, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
 
-    exact = Symbolics.value.(substitute(exact, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
+    specific = Symbolics.value.(substitute(specific, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
 
     rkMat = get_rank(_Only_Here_)
 
-    push!(_Only_Here_, exact)
+    push!(_Only_Here_, specific)
 
     rkExMat = get_rank(_Only_Here_)
     if rkExMat == rkMat
@@ -60,19 +60,23 @@ function is_NL_Observable(sys::Any, viewable::Any, params::Any, specific::Any = 
      end
 
     ans = Symbolics.jacobian(viewable, params, simplify=true)
-    shape = sizeof(shape(ans))
+    shape = size(ans)
 
     if specific != nothing
 
-        exact_ans = get_ans_exact(ans, specific, params)
+        sp_ans = get_ans_specific(ans, specific, params)
 
-        return simplify(det(ans)), exact_ans
+        return simplify(det(ans)), sp_ans
     end
 
-    ans = get_rank(Symbolics.value.(substitute(ans, Dict(params[i] => rand_arr[i] for i in 1:length(params))))
+    ans_rank = get_rank(Symbolics.value.(substitute(ans, Dict(params[i] => rand_arr[i] for i in 1:length(params)))))
 
-    return ans == min(shape)
+    if ans_rank == min(shape[1], shape[2])
+     return 1
+    else 
+     return 0
+    end
+
 end
-
 
 println(expand(is_NL_Observable(DX, vec([y1, y2]), [x1, x2])))
