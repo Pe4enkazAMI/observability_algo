@@ -12,8 +12,8 @@ y2 = x2
 
 
 ######################## Function for computing Jacobian rank
-function get_rank(Matrix::Any)
-     U, S, VT = svd(Matrix)
+function get_rank(Matr::Any)
+     U, S, VT = svd(Matr)
      count = 0
      for i in S
           if i == 0
@@ -27,11 +27,11 @@ end
 
 
 ######################## Function for computing ans for exact parameter
-function get_ans_exact(Matrix::Any, exact::Any, vars::Any)
+function get_ans_exact(Matr::Any, exact::Any, vars::Any)
 
     random_array = rand(Float32, length(vars))
 
-    _Only_Here_ = copy(Matrix)
+    _Only_Here_ = copy(Matr)
 
     _Only_Here_ = Symbolics.value.(substitute(_Only_Here_, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
 
@@ -52,19 +52,19 @@ end
 
 
 
-function is_NL_Observable(sys::Any, viewable::Any, params::Any, exact::Any = nothing)
+function is_NL_Observable(sys::Any, viewable::Any, params::Any, specific::Any = nothing)
     rand_arr = rand(Float32, length(params))
      n = length(viewable)
-     for i in (n+1):(length(sys)-1 + n)
+     for i in (n+1):(length(sys)-1 + (n*length(params)))
          push!(viewable, dot(Symbolics.gradient(viewable[i - n], params, simplify = true), sys))
      end
 
     ans = Symbolics.jacobian(viewable, params, simplify=true)
-    shape = sizeof(shape)
+    shape = sizeof(shape(ans))
 
-    if exact != nothing
+    if specific != nothing
 
-        exact_ans = get_ans_exact(ans, exact, params)
+        exact_ans = get_ans_exact(ans, specific, params)
 
         return simplify(det(ans)), exact_ans
     end
