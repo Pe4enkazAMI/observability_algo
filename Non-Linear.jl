@@ -78,5 +78,6 @@ function is_NL_Observable(sys::Any, viewable::Any, params::Any, specific::Any = 
     end
 
 end
+#smth
 
 println(expand(is_NL_Observable(DX, vec([y1, y2]), [x1, x2])))
