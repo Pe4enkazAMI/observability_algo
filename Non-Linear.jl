@@ -12,22 +12,32 @@ y2 = x2
 
 
 ######################## Function for computing Jacobian rank
-function get_rank(Matr::Any)
+function get_rank(Matr::Any, threshold = 1e-12)
+     """
+          Input:
+               Matr: matrix -_-
+               threshold: -_-
+          Output:
+               length(S) == rank(Matr)
+     """
      U, S, VT = svd(Matr)
-     count = 0
-     for i in S
-          if i == 0
-               break
-          end
-          count += 1
-     end
-     return count
+     S = filter(n -> n > threshold, S)
+     return length(S)
 end 
 ########################
 
 
 ######################## Function for computing ans for exact parameter
 function get_ans_specific(Matr::Any, specific::Any, vars::Any)
+     """
+     Input:
+          Matr: Jacobian matrix
+          specific: specific vector interesting for us for some reason
+          vars: variables of our system
+     Output:
+          1 if interesting vector is observable.
+          0 if not.
+     """
 
     random_array = rand(Float32, length(vars))
 
@@ -53,6 +63,16 @@ end
 
 
 function is_NL_Observable(sys::Any, viewable::Any, params::Any, specific::Any = nothing)
+"""
+     Input:
+          sys: vector of functions that depicts some system. // STRICTLY in order: normal equation -> dummy parameter func.
+          viewable: actually it should be called "output", it is the vector which we observe during something.
+          params: vector of parameters obviously.
+          specific: not essential parameter, helps to find out the obs. information about some specific vector.
+     Output:
+          1 if system is observable.
+          0 if not.
+"""
     rand_arr = rand(Float32, length(params))
      n = length(viewable)
      for i in (n+1):(length(sys)-1 + (n*length(params)))
