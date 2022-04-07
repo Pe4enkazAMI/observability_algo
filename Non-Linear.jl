@@ -2,12 +2,11 @@ using Symbolics
 using LinearAlgebra
 using Nemo
 
-@variables t x1(t) x2(t) a(t) c(t) d(t)
+#@variables t x1(t) x2(t) x3(t)
 
 # Example 1
-DX = [exp(x2), x2] ##last 3 eq's are for params "a, c, d"
-y1 = x1
-y2 = x2
+# DX = [exp(x3 + x2), exp(x2 + x3), exp(x2 + x3)] ##last 3 eq's are for params "a, c, d"
+# y1 = x1
 
 
 
@@ -100,4 +99,4 @@ function is_NL_Observable(sys::Any, viewable::Any, params::Any, specific::Any = 
 end
 #smth
 
-println(expand(is_NL_Observable(DX, vec([y1, y2]), [x1, x2])))
+#println(expand(is_NL_Observable(DX, vec([y1]), [x1, x2, x3], vec([x2 + x3]))))
