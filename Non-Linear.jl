@@ -2,10 +2,10 @@ using Symbolics
 using LinearAlgebra
 using Nemo
 
-@variables t x1(t) x2(t) a(t) c(t) d(t)
+@variables t x1(t) x2(t) x3(t)
 
 # Example 1
-DX = [exp(x2), x2] ##last 3 eq's are for params "a, c, d"
+DX = [exp(x3 + x2), exp(x2 + x3), exp(x2 + x3)] ##last 3 eq's are for params "a, c, d"
 y1 = x1
 y2 = x2
 
@@ -30,34 +30,34 @@ end
 
 ######################## Function for computing ans for exact parameter
 function get_ans_specific(Matr::Any, specific::Any, vars::Any)
-     """
-     Input:
-          Matr: Jacobian matrix
-          specific: specific vector interesting for us for some reason
-          vars: variables of our system
-     Output:
-          True if interesting vector is observable.
-          False if not.
-     """
+          """
+          Input:
+               Matr: Jacobian matrix
+               specific: specific vector interesting for us for some reason
+               vars: variables of our system
+          Output:
+               True if interesting vector is observable.
+               False if not.
+          """
 
-    random_array = rand(Float32, length(vars))
+     random_array = rand(Float32, length(vars))
 
-    _Only_Here_ = copy(Matr)
+     _Only_Here_ = copy(Matr)
 
-    _Only_Here_ = Symbolics.value.(substitute(_Only_Here_, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
+     _Only_Here_ = Symbolics.value.(substitute(_Only_Here_, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
 
-    specific = Symbolics.value.(substitute(specific, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
+     specific = Symbolics.value.(substitute(specific, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
 
-    rkMat = get_rank(_Only_Here_)
+     rkMat = get_rank(_Only_Here_)
+     println(size(_Only_Here_), size(specific))
+     vcat(_Only_Here_, specific)
 
-    hcat(_Only_Here_, specific)
-
-    rkExMat = get_rank(_Only_Here_)
-    if rkExMat == rkMat
-         return true
-    else
-         return false
-    end
+     rkExMat = get_rank(_Only_Here_)
+     if rkExMat == rkMat
+          return true
+     else
+          return false
+     end
 end
 ########################
 
@@ -105,4 +105,4 @@ function is_NL_Observable(sys::Any, output::Any, params::Any, specific::Any = no
 end
 #smth
 
-println(expand(is_NL_Observable(DX, vec([y1, y2]), [x1, x2], [x1, 0, 0, 0, 0])))
+println(expand(is_NL_Observable(DX, vec([y1, y2]), [x1, x2, x3], transpose(vec([x1, 0, 0])))))
