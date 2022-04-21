@@ -97,6 +97,6 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
 
      end
 end
-#smth
+
 
 println(expand(is_NL_Observable(DX, [y1, y2], [x1, x2, x3], [x1, 0, 0])))
