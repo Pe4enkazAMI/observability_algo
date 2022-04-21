@@ -11,59 +11,49 @@ y2 = x2
 
 
 
-######################## Function for computing Jacobian rank
-function get_rank(Matr::Any, threshold = 1e-12)
-     """
-          Input:
-               Matr: matrix -_-
-               threshold: -_-
-          Output:
-               length(S) == rank(Matr)
-     """
-     U, S, VT = svd(Matr)
-     S = filter(n -> n > threshold, S)
-     ans = count((i->(i > 0)),S)
-     return ans
-end 
-########################
-
-
-######################## Function for computing ans for exact parameter
-function get_ans_specific(Matr::Any, specific::Any, vars::Any)
-          """
-          Input:
-               Matr: Jacobian matrix
-               specific: specific vector interesting for us for some reason
-               vars: variables of our system
-          Output:
-               True if interesting vector is observable.
-               False if not.
-          """
-
-     random_array = rand(Float32, length(vars))
-
-     _Only_Here_ = copy(Matr)
-
-     _Only_Here_ = Symbolics.value.(substitute(_Only_Here_, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
-
-     specific = Symbolics.value.(substitute(specific, Dict(vars[i] => random_array[i] for i in 1:length(vars))))
-
-     rkMat = get_rank(_Only_Here_)
-     println(size(_Only_Here_), size(specific))
-     vcat(_Only_Here_, specific)
-
-     rkExMat = get_rank(_Only_Here_)
-     if rkExMat == rkMat
-          return true
-     else
-          return false
-     end
+######################## Function for computing Jacobian rank #UPD
+function get_rank(Matr::Any, threshold = 1e-5)
+    """
+         Input:
+              Matr: matrix -_-
+              threshold: -_-
+         Output:
+              length(S) == rank(Matr)
+    """
+    U, S, VT = svd(Matr)
+    S = filter((n) -> n > threshold, S)
+    ans = count((i->(i > 0)),S)
+    return ans
 end
 ########################
 
 
+######################## Function for computing ans for exact parameter
+function get_ans_specific!(Jacobian::Matrix{Num}, Variables::Vector{Num}, Specific::Vector{Num})
+     random_array = rand(Float32, length(Variables)) ## made a random array for substit.
 
-function is_NL_Observable(sys::Any, output::Any, params::Any, specific::Any = nothing)
+     Spec = copy(Specific)
+
+     before_add = copy(Jacobian)
+
+     before_add = Symbolics.value.(substitute.(before_add, (Dict((Variables[i] => random_array[i]) for i in 1:length(Variables)), )))
+
+     rank1 = get_rank(before_add)
+     reshape(Spec, size(Spec))
+     before_add = vcat(before_add, Transpose(Spec))
+
+     before_add = Symbolics.value.(substitute.(before_add, (Dict((Variables[i] => random_array[i]) for i in 1:length(Variables)), )))
+
+     rank2 = get_rank(before_add)
+
+     return rank1 == rank2 ? true : false
+
+ end
+########################
+
+
+
+function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::Vector{Num})
      """
           Input:
                sys: vector of functions that depicts some system. // STRICTLY in order: normal equation -> dummy parameter func.
@@ -74,9 +64,11 @@ function is_NL_Observable(sys::Any, output::Any, params::Any, specific::Any = no
                True if system is observable.
                False if not.
      """
-     rand_arr = rand(Float32, length(params))
-     n = length(output)
-     for i in (n+1):(length(sys)-1 + (n*length(params)))
+     rand_arr = rand(Float32, size(params)[1])
+
+     n = length(output) ## [y1, y2, y3 ... yn] for each yi we find L(vars) - 1 deriv;
+
+     for i in (n+1):(n*length(params))
          push!(output, dot(Symbolics.gradient(output[i - n], params, simplify = true), sys))
      end
 
@@ -85,7 +77,7 @@ function is_NL_Observable(sys::Any, output::Any, params::Any, specific::Any = no
 
      if specific != nothing
 
-          sp_ans = get_ans_specific(ans, specific, params)
+          sp_ans = get_ans_specific!(ans, params, specific)
 
           return sp_ans
 
@@ -93,11 +85,13 @@ function is_NL_Observable(sys::Any, output::Any, params::Any, specific::Any = no
 
      ans_rank = get_rank(Symbolics.value.(substitute(ans, Dict(params[i] => rand_arr[i] for i in 1:length(params)))))
 
+     println(ans)
+
      if ans_rank == min(shape[1], shape[2])
 
                return true
 
-     else 
+     else
 
                return false
 
@@ -105,4 +99,4 @@ function is_NL_Observable(sys::Any, output::Any, params::Any, specific::Any = no
 end
 #smth
 
-println(expand(is_NL_Observable(DX, vec([y1, y2]), [x1, x2, x3], transpose(vec([x1, 0, 0])))))
+println(expand(is_NL_Observable(DX, [y1, y2], [x1, x2, x3], [x1, 0, 0])))
