@@ -2,15 +2,6 @@ using Symbolics
 using LinearAlgebra
 using Nemo
 
-@variables t x1(t) x2(t) x3(t)
-
-# Example 1
-DX = [exp(x3 + x2), exp(x2 + x3), exp(x2 + x3)] ##last 3 eq's are for params "a, c, d"
-y1 = x1
-y2 = x2
-
-
-
 ######################## Function for computing Jacobian rank #UPD
 function get_rank(Matr::Any, threshold = 1e-5)
     """
@@ -39,7 +30,6 @@ function build_evaluation!(dict, expression)
      if typeof(expression) <: Int
          return
      end
-     println(expression)
      if (typeof(expression) == Symbol) || (operation(expression) in [cos, sin, exp])
          if !(expression in keys(dict))
              dict[expression] = BigInt(rand(1:1000))
@@ -114,11 +104,13 @@ function get_ans_specific!(Jacobian::Matrix{Num}, Variables::Vector{Num}, Specif
      rank2 = get_rank(before_add)
      return rank1 == rank2 ? true : false
  end
+
+
 ########################
 
 
 
-function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::Vector{Num}, guarantee::Bool)
+function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::Any, guarantee::Bool)
      """
           Input:
                sys: vector of functions that depicts some system. // STRICTLY in order: normal equation -> dummy parameter func.
@@ -140,15 +132,16 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
      ans = Symbolics.jacobian(output, params, simplify=true)
      shape = size(ans)
 
-     if specific != nothing
+     if !(specific === nothing)
           sp_ans = get_ans_specific!(ans, params, specific)
           return sp_ans
      end
 
      ans_rank = get_rank(Symbolics.value.(substitute(ans, Dict(params[i] => rand_arr[i] for i in 1:length(params)))))
 
+
      if guarantee
-          upper_rank = get_upper_rank(jacobian)
+          upper_rank = get_upper_rank(ans)
           if (upper_rank == ans_rank) && (ans_rank == min(shape[1], shape[2]))
                return true
           elseif (upper_rank != ans_rank) && (ans_rank == min(shape[1], shape[2]))
@@ -159,10 +152,9 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
      end
 
      if ans_rank == min(shape[1], shape[2])
-          return true
+          return ans
      else
-          return false
+          return ans
      end
 end
 
-println(expand(is_NL_Observable(DX, [y1, y2], [x1, x2, x3], [x1, 0, 0], true)))
