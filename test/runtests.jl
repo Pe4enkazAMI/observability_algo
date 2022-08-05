@@ -19,5 +19,10 @@ include("../Non-Linear.jl")
     y = x1 + x2    
     @test !is_NL_Observable(xdot, [y], [x1, x2], nothing, true)
 
-    
+    @variables x1 x2 x3
+    xdot = [x1^2 + x2^2 + 2x1 + 2x2 - x1*x3, x3, x1]
+    y = x1 + x3*x2
+    @test is_NL_Observable(xdot, [y], [x1, x2, x3], nothing, true)
+
+
 end

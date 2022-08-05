@@ -7,39 +7,37 @@ include("../Non-Linear.jl")
 xdot = [(a-b*y)*x, (-c+d*x)*y, a, b, c, d]
 z = x + y 
 params = [x, y, a, b, c, d]
-rand_arr = rand(Float32, size(params)[1])
+rand_arr = rand(Int, size(params)[1])
 new = is_NL_Observable(xdot, [z], [x, y, a, b, c, d], nothing, false)
 new = Symbolics.value.(substitute(new, Dict(params[i] => rand_arr[i] for i in 1:length(params))))
 
+new
 
 matrix = [2 3 4 5 6
           3 4 5 6 7
           4 5 6 7 8
           5 6 7 8 9]
 
-L, U, P = lu(matrix, check = false)
-U
-
-(L*U)
-matrix[P, :]
-
-
-
-function find_linear_indep(matrix::Any, tol::Real = 1e-6)
+function find_linear_indep(matrix::Any)
     """ Input:
             matrix: matrix of size MxN
         Output:
-            ind_array: indices of linear independent set of columns or row (IN A[P, :]!!!!), i haven't decided yet :)
+            ind_array: indices of linear independent set of columns
     """
-    L, U, P = lu(matrix)
-    n, m = size(U);
+    m, n = size(matrix)
+    mSpace = Nemo.MatrixSpace(ZZ, m, n)
+    matr = Nemo.rref(mSpace(matrix))[2]
     ind_array = []
-    for i in 1:min(n, m)
-        if U[i, i] > tol
+    for i in 1:min(m, n)
+        if matr[i, i] != 0
             push!(ind_array, i)
         end
     end
-    return ind_array 
+    return ind_array
 end
 
 find_linear_indep(matrix)
+ 
+
+
+

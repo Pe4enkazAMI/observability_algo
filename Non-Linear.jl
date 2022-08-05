@@ -18,6 +18,25 @@ function get_rank(Matr::Any, threshold = 1e-5)
 end
 #############################
 
+function find_linear_indep(matrix::Any)
+     """ Input:
+             matrix: matrix of size MxN
+         Output:
+             ind_array: indices of linear independent set of columns
+     """
+     m, n = size(matrix)
+     mSpace = Nemo.MatrixSpace(ZZ, m, n)
+     matr = Nemo.rref(mSpace(matrix))[2]
+     ind_array = []
+     for i in 1:min(m, n)
+         if matr[i, i] != 0
+             push!(ind_array, i)
+         end
+     end
+     return ind_array
+ end
+
+#############################
 
 function build_evaluation!(dict, expression)
      """  
@@ -93,7 +112,7 @@ function get_ans_specific!(Jacobian::Matrix{Num}, Variables::Vector{Num}, Specif
           Output:
                Bool: True if specific is identifyable or False otherwise
      """
-     random_array = rand(Float32, length(Variables)) ## made a random array for substit.
+     random_array = rand(Int, length(Variables)) ## made a random array for substit.
      Spec = copy(Specific)
      before_add = copy(Jacobian)
      before_add = Symbolics.value.(substitute.(before_add, (Dict((Variables[i] => random_array[i]) for i in 1:length(Variables)), )))
@@ -121,7 +140,7 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
                True if system is observable.
                False if not.
      """
-     rand_arr = rand(Float32, size(params)[1])
+     rand_arr = rand(Int, size(params)[1])
 
      n = length(output) ## [y1, y2, y3 ... yn] for each yi we find L(vars) - 1 deriv;
 
@@ -152,9 +171,9 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
      end
 
      if ans_rank == min(shape[1], shape[2])
-          return ans
+          return true
      else
-          return ans
+          return false
      end
 end
 
