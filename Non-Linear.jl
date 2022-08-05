@@ -25,7 +25,12 @@ function find_linear_indep(matrix::Any)
              ind_array: indices of linear independent set of columns
      """
      m, n = size(matrix)
-     mSpace = Nemo.MatrixSpace(ZZ, m, n)
+ 
+     if m == 1
+         return [1];
+     end
+ 
+     mSpace = Nemo.MatrixSpace(QQ, m, n)
      matr = Nemo.rref(mSpace(matrix))[2]
      ind_array = []
      for i in 1:min(m, n)
