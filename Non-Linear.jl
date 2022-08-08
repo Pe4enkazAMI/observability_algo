@@ -141,12 +141,14 @@ function get_lower_rank(matrix)
      cols = []
      for i in 1:min(size(U)[1], size(U)[2])
           if U[i, i] != zero(U[i, i])
-               push!(i, cols)
+               push!(cols, i)
+          end
      end
 
      for i in 1:lastindex(cols)
           cols[i] = P[cols[i]]
      end
+
      return cols
 end
 
@@ -157,11 +159,9 @@ function guarantee_func(ans, rank, valued_matr, shape)
      upper_rank_indep_col = find_linear_indep(integer_matr)
      lower_rank_indep_col = get_lower_rank(valued_matr)
 
-     if (upper_rank == rank) && (rank == min(shape[1], shape[2]))
+     if (length(upper_rank_indep_col) == length(lower_rank_indep_col) == min(shape[1], shape[2]))
           return true
-     elseif (upper_rank != rank) && (rank == min(shape[1], shape[2]))
-          return true
-     else 
+     else
           return false
      end
 end
