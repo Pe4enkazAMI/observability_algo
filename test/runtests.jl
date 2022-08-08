@@ -12,7 +12,7 @@ include("../Non-Linear.jl")
     @variables t x(t) y(t) a b c d
     xdot = [(a-b*y)*x, (-c+d*x)*y, a, b, c, d]
     y = x + y
-    @test is_NL_Observable(DX, [y], [x], nothing, true)
+    @test is_NL_Observable(xdot, [y], [x], nothing, true)
 
     @variables x1 x2
     xdot = [x1^2 + 2*x1*x2, x2^2]

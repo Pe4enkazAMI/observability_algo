@@ -1,6 +1,7 @@
 using Symbolics
 using LinearAlgebra
 using Nemo
+using Arblib
 
 ######################## Function for computing Jacobian rank #UPD
 function get_rank(Matr::Any, threshold = 1e-5)
@@ -103,7 +104,7 @@ function get_upper_rank(jacobian)
           push!(new_arr, eval(evaluate(expr, var_change)))
      end
      new_arr = reshape(Vector{Int}(new_arr), size(jacobian))
-     return rank(new_arr)
+     return rank(new_arr), new_arr
 end
 
 ######################## Function for computing ans for exact parameter
@@ -132,7 +133,40 @@ function get_ans_specific!(Jacobian::Matrix{Num}, Variables::Vector{Num}, Specif
 
 ########################
 
+########################
 
+function get_lower_rank(matrix)
+     matrix = transpose(ArbMatrix(matrix))
+     L, U, P = lu(matrix, check = false)
+     cols = []
+     for i in 1:min(size(U)[1], size(U)[2])
+          if U[i, i] != zero(U[i, i])
+               push!(i, cols)
+     end
+
+     for i in 1:lastindex(cols)
+          cols[i] = P[cols[i]]
+     end
+     return cols
+end
+
+########################
+function guarantee_func(ans, rank, valued_matr, shape)
+     upper_rank, integer_matr = get_upper_rank(ans)
+
+     upper_rank_indep_col = find_linear_indep(integer_matr)
+     lower_rank_indep_col = get_lower_rank(valued_matr)
+
+     if (upper_rank == rank) && (rank == min(shape[1], shape[2]))
+          return true
+     elseif (upper_rank != rank) && (rank == min(shape[1], shape[2]))
+          return true
+     else 
+          return false
+     end
+end
+
+########################
 
 function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::Any, guarantee::Bool)
      """
@@ -145,8 +179,7 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
                True if system is observable.
                False if not.
      """
-     rand_arr = rand(Int, size(params)[1])
-
+     rand_arr = rand(Float32, size(params)[1])
      n = length(output) ## [y1, y2, y3 ... yn] for each yi we find L(vars) - 1 deriv;
 
      for i in (n+1):(n*length(params))
@@ -161,18 +194,11 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
           return sp_ans
      end
 
-     ans_rank = get_rank(Symbolics.value.(substitute(ans, Dict(params[i] => rand_arr[i] for i in 1:length(params)))))
-
+     ans_valued = Symbolics.value.(substitute(ans, Dict(params[i] => rand_arr[i] for i in 1:length(params))))
+     ans_rank = get_rank(ans_valued)
 
      if guarantee
-          upper_rank = get_upper_rank(ans)
-          if (upper_rank == ans_rank) && (ans_rank == min(shape[1], shape[2]))
-               return true
-          elseif (upper_rank != ans_rank) && (ans_rank == min(shape[1], shape[2]))
-               return true
-          else 
-               return false
-          end
+          return guarantee_func(ans, ans_rank, ans_valued, shape)
      end
 
      if ans_rank == min(shape[1], shape[2])
