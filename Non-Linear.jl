@@ -19,28 +19,6 @@ function get_rank(Matr::Any, threshold = 1e-5)
 end
 #############################
 
-function find_linear_indep(matrix::Any)
-     """ Input:
-             matrix: matrix of size MxN
-         Output:
-             ind_array: indices of linear independent set of columns
-     """
-     m, n = size(matrix)
- 
-     if m == 1
-         return [1];
-     end
- 
-     mSpace = Nemo.MatrixSpace(QQ, m, n)
-     matr = Nemo.rref(mSpace(matrix))[2]
-     ind_array = []
-     for i in 1:min(m, n)
-         if matr[i, i] != 0
-             push!(ind_array, i)
-         end
-     end
-     return ind_array
- end
 
 #############################
 
@@ -89,24 +67,6 @@ function evaluate(expression, dict)
 
 ########################
 
-function get_upper_rank(jacobian)
-     """
-          Input:
-               jacobian: actually it is a matrix on which we want to know the upper bound for rank
-          Output:
-               rank: upper bound for rank of jacobian
-     """
-     var_change = Dict{Any, Any}()
-     new_arr = []
-     for i in jacobian
-          expr = Symbolics.toexpr(i)
-          build_evaluation!(var_change, expr)
-          push!(new_arr, eval(evaluate(expr, var_change)))
-     end
-     new_arr = reshape(Vector{Int}(new_arr), size(jacobian))
-     return rank(new_arr), new_arr
-end
-
 ######################## Function for computing ans for exact parameter
 
 function get_ans_specific!(Jacobian::Matrix{Num}, Variables::Vector{Num}, Specific::Vector{Num})
@@ -132,38 +92,62 @@ function get_ans_specific!(Jacobian::Matrix{Num}, Variables::Vector{Num}, Specif
 
 
 ########################
-
-########################
-
-function get_lower_rank(matrix)
-     matrix = transpose(ArbMatrix(matrix))
-     L, U, P = lu(matrix, check = false)
-     cols = []
-     for i in 1:min(size(U)[1], size(U)[2])
-          if U[i, i] != zero(U[i, i])
-               push!(cols, i)
-          end
-     end
-
-     for i in 1:lastindex(cols)
-          cols[i] = P[cols[i]]
-     end
-
-     return cols
+function find_linear_indep(matrix::Any)
+     """ Input:
+            matrix: matrix of size MxN
+        Output:
+            ind_array: indices of linear independent set of columns
+    """
+    m, n = size(matrix)
+    ind_col = []
+    MatSpace = Nemo.MatrixSpace(QQ, m, n)
+    rref_mat = Nemo.rref(MatSpace(matrix))[2]
+    for i in 1:m
+        for j in 1:n
+            if rref_mat[i, j] != 0
+                push!(ind_col, j)
+                break
+            end
+         end
+    end
+    return ind_col
 end
 
 ########################
-function guarantee_func(ans, rank, valued_matr, shape)
-     upper_rank, integer_matr = get_upper_rank(ans)
 
-     upper_rank_indep_col = find_linear_indep(integer_matr)
-     lower_rank_indep_col = get_lower_rank(valued_matr)
+function get_lower_rank(indep_cols, jacobian, params)
+     arb_change = ArbMatrix(Arblib.Random.randn(length(params)), prec = 30)
+     valued_jacob = Symbolics.value.(substitute(jacobian, Dict(params[i] => arb_change[i] for i in 1:lastindex(params))))
+     print(indep_cols)
+     ATA = transpose(valued_jacob[:,indep_cols]) * valued_jacob[:,indep_cols]
 
-     if (length(upper_rank_indep_col) == length(lower_rank_indep_col) == min(shape[1], shape[2]))
-          return true
-     else
-          return false
+     try lu(ATA) catch; return false end
+     return true
+end
+
+########################
+function get_upper_rank(jacobian)
+     """
+          Input:
+               jacobian: actually it is a matrix on which we want to know the upper bound for rank
+          Output:
+               rank: upper bound for rank of jacobian
+     """
+     var_change = Dict{Any, Any}()
+     new_arr = []
+     for i in jacobian
+          expr = Symbolics.toexpr(i)
+          build_evaluation!(var_change, expr)
+          push!(new_arr, eval(evaluate(expr, var_change)))
      end
+     new_arr = reshape(Vector{Int}(new_arr), size(jacobian))
+     return rank(new_arr), find_linear_indep(new_arr)
+end
+########################
+
+function guarantee_func(jacobian, params)
+     rank, indep_cols = get_upper_rank(jacobian)
+     return get_lower_rank(indep_cols, jacobian, params)
 end
 
 ########################
@@ -179,7 +163,6 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
                True if system is observable.
                False if not.
      """
-     rand_arr = rand(Float32, size(params)[1])
      n = length(output) ## [y1, y2, y3 ... yn] for each yi we find L(vars) - 1 deriv;
 
      for i in (n+1):(n*length(params))
@@ -194,12 +177,14 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
           return sp_ans
      end
 
+     if guarantee
+          ans = guarantee_func(ans, params)
+          return ans
+     end
+
+     rand_arr = rand(Float32, size(params)[1])
      ans_valued = Symbolics.value.(substitute(ans, Dict(params[i] => rand_arr[i] for i in 1:length(params))))
      ans_rank = get_rank(ans_valued)
-
-     if guarantee
-          return guarantee_func(ans, ans_rank, ans_valued, shape)
-     end
 
      if ans_rank == min(shape[1], shape[2])
           return true
@@ -207,4 +192,3 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
           return false
      end
 end
-
