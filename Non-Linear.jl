@@ -117,10 +117,15 @@ end
 
 function get_lower_rank(indep_cols, jacobian, params)
      arb_change = ArbMatrix(Arblib.Random.randn(length(params)), prec = 30)
-     valued_jacob = Symbolics.value.(substitute(jacobian, Dict(params[i] => arb_change[i] for i in 1:lastindex(params))))
-     print(indep_cols)
-     ATA = transpose(valued_jacob[:,indep_cols]) * valued_jacob[:,indep_cols]
+     n, m = size(jacobian)
+     valued_jacob = ArbMatrix(n, m)
+     for i in 1:n
+          for j in 1:m
+               valued_jacob[i, j] = Symbolics.value(substitute(jacobian[i,j], Dict(params[k] => arb_change[k] for k in 1:lastindex(params))))
+          end
+     end
 
+     ATA = transpose(valued_jacob[:,indep_cols]) * valued_jacob[:,indep_cols]
      try lu(ATA) catch; return false end
      return true
 end
@@ -192,3 +197,9 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
           return false
      end
 end
+
+
+@variables x1 x2
+xdot = [0, exp(2*x2) + exp(x1)*x2]
+y = exp(x1) + x2
+is_NL_Observable(xdot, [y], [x1, x2], nothing, true)
