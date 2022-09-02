@@ -1,5 +1,9 @@
 using Test
 
+using Logging
+logger = Logging.SimpleLogger(stdout, Logging.Debug)
+global_logger(logger)
+
 include("../Non-Linear.jl")
 
 @testset "Identifiability of the whole system" begin
@@ -25,7 +29,9 @@ include("../Non-Linear.jl")
     @test is_NL_Observable(xdot, [y], [x1, x2, x3], nothing, true)
 
     @variables x1 x2
-    xdot = [0, exp(2*x2) + exp(x1)*x2]
+    xdot = [0, exp(2 * x1) + 2 * exp(x1) * x2 + x2^2]
     y = exp(x1) + x2
+    # the actual output should be `false` but for the current version of the algorithm
+    # the correct should be something like throwing an exception
     @test is_NL_Observable(xdot, [y], [x1, x2], nothing, true)
 end

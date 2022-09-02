@@ -124,9 +124,16 @@ function get_lower_rank(indep_cols, jacobian, params)
                valued_jacob[i, j] = Symbolics.value(substitute(jacobian[i,j], Dict(params[k] => arb_change[k] for k in 1:lastindex(params))))
           end
      end
+     @debug "Interval matrix after specialization $valued_jacob with precision $(valued_jacob.prec)"
 
      ATA = transpose(valued_jacob[:,indep_cols]) * valued_jacob[:,indep_cols]
-     try lu(ATA) catch; return false end
+     @debug "the ATA matrix is $ATA"
+     try 
+         lu(ATA) 
+     catch e
+         @debug "Caught $e in LU"
+         return false
+     end
      return true
 end
 
@@ -152,6 +159,7 @@ end
 
 function guarantee_func(jacobian, params)
      rank, indep_cols = get_upper_rank(jacobian)
+     @debug "Upper bound for the rank is $rank, conjectured independent columns are $indep_cols"
      return get_lower_rank(indep_cols, jacobian, params)
 end
 
