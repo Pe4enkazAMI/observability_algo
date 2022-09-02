@@ -129,7 +129,8 @@ function get_lower_rank(indep_cols, jacobian, params)
      ATA = transpose(valued_jacob[:,indep_cols]) * valued_jacob[:,indep_cols]
      @debug "the ATA matrix is $ATA"
      try 
-         lu(ATA) 
+         jac_lu = lu(ATA) 
+         @debug "Resulting LU is $jac_lu"
      catch e
          @debug "Caught $e in LU"
          return false
@@ -152,6 +153,7 @@ function get_upper_rank(jacobian)
           build_evaluation!(var_change, expr)
           push!(new_arr, eval(evaluate(expr, var_change)))
      end
+     @debug "Resulting evaluation $var_change"
      new_arr = reshape(Vector{Int}(new_arr), size(jacobian))
      return rank(new_arr), find_linear_indep(new_arr)
 end
