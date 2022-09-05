@@ -193,8 +193,7 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
      end
 
      if guarantee
-          ans = guarantee_func(ans, params)
-          return ans
+          return guarantee_func(ans, params) == min(shape[1], shape[2])
      end
 
      rand_arr = rand(Float32, size(params)[1])
