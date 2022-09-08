@@ -162,7 +162,10 @@ end
 function guarantee_func(jacobian, params)
      rank, indep_cols = get_upper_rank(jacobian)
      @debug "Upper bound for the rank is $rank, conjectured independent columns are $indep_cols"
-     return get_lower_rank(indep_cols, jacobian, params)
+     if get_lower_rank(indep_cols, jacobian, params)
+         return rank
+     end
+     return -1
 end
 
 ########################
@@ -192,23 +195,18 @@ function is_NL_Observable(sys::Any, output::Any, params::Vector{Num}, specific::
           return sp_ans
      end
 
+     ans_rank = -1
      if guarantee
-          return guarantee_func(ans, params) == min(shape[1], shape[2])
+          ans_rank = guarantee_func(ans, params)
+          if ans_rank == -1
+              @warn "Could not get the guaranteed rank computation, switching to sampling"
+          end
+     end
+     if ans_rank == -1
+         rand_arr = rand(Float32, size(params)[1])
+         ans_valued = Symbolics.value.(substitute(ans, Dict(params[i] => rand_arr[i] for i in 1:length(params))))
+         ans_rank = get_rank(ans_valued)
      end
 
-     rand_arr = rand(Float32, size(params)[1])
-     ans_valued = Symbolics.value.(substitute(ans, Dict(params[i] => rand_arr[i] for i in 1:length(params))))
-     ans_rank = get_rank(ans_valued)
-
-     if ans_rank == min(shape[1], shape[2])
-          return true
-     else
-          return false
-     end
+     return ans_rank == min(shape[1], shape[2])
 end
-
-
-@variables x1 x2
-xdot = [0, exp(2*x2) + exp(x1)*x2]
-y = exp(x1) + x2
-is_NL_Observable(xdot, [y], [x1, x2], nothing, true)
